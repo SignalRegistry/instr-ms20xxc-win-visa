@@ -1,0 +1,8 @@
+{
+  "C_Cpp.default.includePath": [
+    "C:\\Program Files (x86)\\IVI Foundation - NIVisa\\VISA\\WinNT\\Include"
+  ],
+  "files.associations": {
+    "visa.h": "c"
+  }
+}
