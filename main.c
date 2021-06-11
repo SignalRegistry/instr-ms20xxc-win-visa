@@ -7,7 +7,7 @@
 #include "visa.h"
 
 static char stringinput[512];
-static unsigned char buffer[100];
+static unsigned char buffer[100000];
 static ViUInt32 retCount;
 static ViUInt32 writeCount;
 
@@ -55,7 +55,7 @@ int main()
     {
       printf("Connected\n");
       status = viSetAttribute(instr, VI_ATTR_TMO_VALUE, 5000);
-      strcpy(stringinput, "*IDN?");
+      strcpy(stringinput, ":SENSe1:FREQuency:DATA?");
       status = viWrite(instr, (ViBuf)stringinput, (ViUInt32)strlen(stringinput), &writeCount);
       if (status < VI_SUCCESS)
       {
@@ -68,52 +68,94 @@ int main()
      * function to acquire the data.  We will try to read back 100 bytes.
      * After the data has been read the response is displayed.
      */
-      status = viRead(instr, buffer, 100, &retCount);
+      status = viRead(instr, buffer, 100000, &retCount);
       if (status < VI_SUCCESS)
       {
         printf("Error reading a response from the device\n");
       }
       else
       {
-        printf("Data read: %*s\n", retCount, buffer);
+        printf("Number of byte info: %d\n", (buffer[1] - '0'));
+        printf("Data read: %*s\n", retCount - (buffer[1] - '0') - 1, &buffer[(buffer[1] - '0') + 2]);
+        char *delim = strtok(&buffer[(buffer[1] - '0') + 2], ",");
+        // loop through the string to extract all other tokens
+        int i=1;
+        while (delim != NULL)
+        {
+          printf("%d: %f\n", i++, atof(delim)); //printing each token
+          delim = strtok(NULL, ",");
+        }
       }
+
+      // parameter
+      strcpy(stringinput, ":SENSe:FREQuency:STARt?");
+      status = viWrite(instr, (ViBuf)stringinput, (ViUInt32)strlen(stringinput), &writeCount);
+      if (status < VI_SUCCESS)
+        printf("Error writing to the device\n");
+      status = viRead(instr, buffer, 100000, &retCount);
+      if (status < VI_SUCCESS)
+        printf("Error reading a response from the device\n");
+      else
+        printf("Data read: %.*s\n", retCount, buffer);
+      // parameter
+      strcpy(stringinput, ":SENSe:FREQuency:STOP?");
+      status = viWrite(instr, (ViBuf)stringinput, (ViUInt32)strlen(stringinput), &writeCount);
+      if (status < VI_SUCCESS)
+        printf("Error writing to the device\n");
+      status = viRead(instr, buffer, 100000, &retCount);
+      if (status < VI_SUCCESS)
+        printf("Error reading a response from the device\n");
+      else
+        printf("Data read: %.*s\n", retCount, buffer);
+      // parameter
+      strcpy(stringinput, ":SENSe:SWEEp:POINts?");
+      status = viWrite(instr, (ViBuf)stringinput, (ViUInt32)strlen(stringinput), &writeCount);
+      if (status < VI_SUCCESS)
+        printf("Error writing to the device\n");
+      status = viRead(instr, buffer, 100000, &retCount);
+      if (status < VI_SUCCESS)
+        printf("Error reading a response from the device\n");
+      else
+        printf("Data read: %.*s\n", retCount, buffer);
+
+
       status = viClose(instr);
     }
-    for (unsigned i = 0; i < numInstrs - 1; --i)
-    {
-      status = viFindNext(fList, desc); /* find next desriptor */
-      status = viOpen(defaultRM, desc, VI_NULL, VI_NULL, &instr);
-      if (status < VI_SUCCESS)
-        printf("An error occurred opening a session to %s\n", desc);
-      else
-      {
-        printf("Connected\n");
-        status = viSetAttribute(instr, VI_ATTR_TMO_VALUE, 5000);
-        strcpy(stringinput, "*IDN?");
-        status = viWrite(instr, (ViBuf)stringinput, (ViUInt32)strlen(stringinput), &writeCount);
-        if (status < VI_SUCCESS)
-        {
-          printf("Error writing to the device\n");
-        }
+    // for (unsigned i = 0; i < numInstrs - 1; --i)
+    // {
+    //   status = viFindNext(fList, desc); /* find next desriptor */
+    //   status = viOpen(defaultRM, desc, VI_NULL, VI_NULL, &instr);
+    //   if (status < VI_SUCCESS)
+    //     printf("An error occurred opening a session to %s\n", desc);
+    //   else
+    //   {
+    //     printf("Connected\n");
+    //     status = viSetAttribute(instr, VI_ATTR_TMO_VALUE, 5000);
+    //     strcpy(stringinput, "*IDN?");
+    //     status = viWrite(instr, (ViBuf)stringinput, (ViUInt32)strlen(stringinput), &writeCount);
+    //     if (status < VI_SUCCESS)
+    //     {
+    //       printf("Error writing to the device\n");
+    //     }
 
-        /*
-     * Now we will attempt to read back a response from the device to
-     * the identification query that was sent.  We will use the viRead
-     * function to acquire the data.  We will try to read back 100 bytes.
-     * After the data has been read the response is displayed.
-     */
-        status = viRead(instr, buffer, 100, &retCount);
-        if (status < VI_SUCCESS)
-        {
-          printf("Error reading a response from the device\n");
-        }
-        else
-        {
-          printf("Data read: %*s\n", retCount, buffer);
-        }
-        status = viClose(instr);
-      }
-    }
+    //     /*
+    //  * Now we will attempt to read back a response from the device to
+    //  * the identification query that was sent.  We will use the viRead
+    //  * function to acquire the data.  We will try to read back 100 bytes.
+    //  * After the data has been read the response is displayed.
+    //  */
+    //     status = viRead(instr, buffer, 100, &retCount);
+    //     if (status < VI_SUCCESS)
+    //     {
+    //       printf("Error reading a response from the device\n");
+    //     }
+    //     else
+    //     {
+    //       printf("Data read: %*s\n", retCount, buffer);
+    //     }
+    //     status = viClose(instr);
+    //   }
+    // }
     // {
     //   /* stay in this loop until we find all instruments */
     //   status = viFindNext(findList, instrDescriptor); /* find next desriptor */
