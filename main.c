@@ -1,185 +1,331 @@
+#define INTRO "\n"                                                                             \
+              "////////////////////////////////////////////////////////////////////////////\n" \
+              "//                    Signal Registry                                     //\n" \
+              "//      Instrument Client for Anritsu MS20XXC Series                      //\n" \
+              "//             https://instr.signalregistry.net                           //\n" \
+              "//                 Author: Huseyin YIGIT                                  //\n" \
+              "//                    Version: 1.0.0                                      //\n" \
+              "////////////////////////////////////////////////////////////////////////////\n"
 
+#define DEBUG_LOG
+
+#define LOCALHOST "localhost"
+#define LOCALPORT 3001
+#define HOST "instr.signalregistry.net"
+#define PORT 80
+#define STREAM_INTERVAL 1000 // milliseconds
 
 #include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <stdarg.h>
+#pragma warning(disable : 4996)
 
-#include "visa.h"
+////////////////////////////////////////////////////////////////////////////////
+// Libraries
+////////////////////////////////////////////////////////////////////////////////
+#include "civetweb.h"
+#include "jansson.h"
 
-static char stringinput[512];
-static unsigned char buffer[100000];
-static ViUInt32 retCount;
-static ViUInt32 writeCount;
+////////////////////////////////////////////////////////////////////////////////
+// Instrument
+////////////////////////////////////////////////////////////////////////////////
+#include "instr.h"
 
-int main()
+////////////////////////////////////////////////////////////////////////////////
+// Logging
+////////////////////////////////////////////////////////////////////////////////
+static inline void LOGGER(const char *fmt, ...)
 {
-  printf("Step: 0\n");
-  ViStatus status; // Error checking
-  ViSession defaultRM, instr;
-  ViUInt32 numInstrs; // Return count from string I/O
-  ViFindList fList;
-  ViChar desc[VI_FIND_BUFLEN];
+  va_list args;
+  va_start(args, fmt);
+  vprintf(fmt, args);
+  va_end(args);
+  fflush(stdout);
+}
 
-  printf("Step: Initialize VISA\n");
-  status = viOpenDefaultRM(&defaultRM);
+////////////////////////////////////////////////////////////////////////////////
+// Helper arguments and functions
+////////////////////////////////////////////////////////////////////////////////
+static int CLOSENOW = 0;
+static int EXITNOW = 0;
+static int RETRY_COUNT = 50;
 
-  if (status < VI_SUCCESS)
+enum CLIENT_MSG_TYPE
+{
+  CLIENT_MSG_BLANK,
+  CLIENT_DEV_CONF,
+};
+
+/* Helper function to get a printable name for websocket opcodes */
+static const char *
+msgtypename(int flags)
+{
+  unsigned f = (unsigned)flags & 0xFu;
+  switch (f)
   {
-    printf("Can't initialize VISA\n");
-    return -1;
+  case MG_WEBSOCKET_OPCODE_CONTINUATION:
+    return "continuation";
+  case MG_WEBSOCKET_OPCODE_TEXT:
+    return "text";
+  case MG_WEBSOCKET_OPCODE_BINARY:
+    return "binary";
+  case MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE:
+    return "connection close";
+  case MG_WEBSOCKET_OPCODE_PING:
+    return "PING";
+  case MG_WEBSOCKET_OPCODE_PONG:
+    return "PONG";
   }
-  else
-    printf("VISA initialized.\n");
+  return "unknown";
+}
 
-  status = viFindRsrc(defaultRM, "?*", &fList, &numInstrs, desc);
-  // if (status < VI_SUCCESS)
-  // {
-  //   printf("Can't initialize find\n");
-  //   return -1;
-  // }
-  if (status == VI_ERROR_INV_OBJECT)
-    printf("Invalid object\n");
-  else if (status == VI_ERROR_NSUP_OPER)
-    printf("Session does not support operation\n");
-  else if (status == VI_ERROR_INV_EXPR)
-    printf("Invalid expression\n");
-  else if (status == VI_ERROR_RSRC_NFOUND)
-    printf("Resource not found\n");
-  else
+/* Callback for handling data received from the server */
+static int
+websocket_client_data_handler(struct mg_connection *conn,
+                              int flags,
+                              char *data,
+                              size_t data_len,
+                              void *user_data)
+{
+  time_t now = time(NULL);
+
+  /* We may get some different message types (websocket opcodes).
+	 * We will handle these messages differently. */
+  int is_text = ((flags & 0xf) == MG_WEBSOCKET_OPCODE_TEXT);
+  int is_bin = ((flags & 0xf) == MG_WEBSOCKET_OPCODE_BINARY);
+  int is_ping = ((flags & 0xf) == MG_WEBSOCKET_OPCODE_PING);
+  int is_pong = ((flags & 0xf) == MG_WEBSOCKET_OPCODE_PONG);
+  int is_close = ((flags & 0xf) == MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE);
+
+  /* Check if we got a websocket PING request */
+  if (is_ping)
   {
-    printf("%s \n", desc);
-    status = viOpen(defaultRM, desc, VI_NULL, VI_NULL, &instr);
-    if (status < VI_SUCCESS)
-      printf("An error occurred opening a session to %s\n", desc);
-    else
+    /* PING requests are to check if the connection is broken.
+		 * They should be replied with a PONG with the same data.
+		 */
+    mg_websocket_client_write(conn,
+                              MG_WEBSOCKET_OPCODE_PONG,
+                              data,
+                              data_len);
+    return 1;
+  }
+
+  /* It we got a websocket TEXT message, handle it ... */
+  if (is_text)
+  {
+    char *buff = 0;
+    json_error_t *err_buff = NULL;
+    char *msg = (char *)malloc(sizeof(char) * (data_len + 1));
+    snprintf(msg, data_len + 1, "%s", data);
+    json_t *obj = json_loads(msg, 0, err_buff);
+    LOGGER("[DEBUG] Message : %s\n", msg);
+    if (json_object_get(obj, "server") != NULL)
     {
-      printf("Connected\n");
-      status = viSetAttribute(instr, VI_ATTR_TMO_VALUE, 5000);
-      strcpy(stringinput, ":SENSe1:FREQuency:DATA?");
-      status = viWrite(instr, (ViBuf)stringinput, (ViUInt32)strlen(stringinput), &writeCount);
-      if (status < VI_SUCCESS)
-      {
-        printf("Error writing to the device\n");
-      }
-
-      /*
-     * Now we will attempt to read back a response from the device to
-     * the identification query that was sent.  We will use the viRead
-     * function to acquire the data.  We will try to read back 100 bytes.
-     * After the data has been read the response is displayed.
-     */
-      status = viRead(instr, buffer, 100000, &retCount);
-      if (status < VI_SUCCESS)
-      {
-        printf("Error reading a response from the device\n");
-      }
-      else
-      {
-        printf("Number of byte info: %d\n", (buffer[1] - '0'));
-        printf("Data read: %*s\n", retCount - (buffer[1] - '0') - 1, &buffer[(buffer[1] - '0') + 2]);
-        char *delim = strtok(&buffer[(buffer[1] - '0') + 2], ",");
-        // loop through the string to extract all other tokens
-        int i=1;
-        while (delim != NULL)
-        {
-          printf("%d: %f\n", i++, atof(delim)); //printing each token
-          delim = strtok(NULL, ",");
-        }
-      }
-
-      // parameter
-      strcpy(stringinput, ":SENSe:FREQuency:STARt?");
-      status = viWrite(instr, (ViBuf)stringinput, (ViUInt32)strlen(stringinput), &writeCount);
-      if (status < VI_SUCCESS)
-        printf("Error writing to the device\n");
-      status = viRead(instr, buffer, 100000, &retCount);
-      if (status < VI_SUCCESS)
-        printf("Error reading a response from the device\n");
-      else
-        printf("Data read: %.*s\n", retCount, buffer);
-      // parameter
-      strcpy(stringinput, ":SENSe:FREQuency:STOP?");
-      status = viWrite(instr, (ViBuf)stringinput, (ViUInt32)strlen(stringinput), &writeCount);
-      if (status < VI_SUCCESS)
-        printf("Error writing to the device\n");
-      status = viRead(instr, buffer, 100000, &retCount);
-      if (status < VI_SUCCESS)
-        printf("Error reading a response from the device\n");
-      else
-        printf("Data read: %.*s\n", retCount, buffer);
-      // parameter
-      strcpy(stringinput, ":SENSe:SWEEp:POINts?");
-      status = viWrite(instr, (ViBuf)stringinput, (ViUInt32)strlen(stringinput), &writeCount);
-      if (status < VI_SUCCESS)
-        printf("Error writing to the device\n");
-      status = viRead(instr, buffer, 100000, &retCount);
-      if (status < VI_SUCCESS)
-        printf("Error reading a response from the device\n");
-      else
-        printf("Data read: %.*s\n", retCount, buffer);
-
-
-      status = viClose(instr);
+      json_object_del(obj, "server");
+      json_decref(obj);
     }
-    // for (unsigned i = 0; i < numInstrs - 1; --i)
-    // {
-    //   status = viFindNext(fList, desc); /* find next desriptor */
-    //   status = viOpen(defaultRM, desc, VI_NULL, VI_NULL, &instr);
-    //   if (status < VI_SUCCESS)
-    //     printf("An error occurred opening a session to %s\n", desc);
-    //   else
-    //   {
-    //     printf("Connected\n");
-    //     status = viSetAttribute(instr, VI_ATTR_TMO_VALUE, 5000);
-    //     strcpy(stringinput, "*IDN?");
-    //     status = viWrite(instr, (ViBuf)stringinput, (ViUInt32)strlen(stringinput), &writeCount);
-    //     if (status < VI_SUCCESS)
-    //     {
-    //       printf("Error writing to the device\n");
-    //     }
-
-    //     /*
-    //  * Now we will attempt to read back a response from the device to
-    //  * the identification query that was sent.  We will use the viRead
-    //  * function to acquire the data.  We will try to read back 100 bytes.
-    //  * After the data has been read the response is displayed.
-    //  */
-    //     status = viRead(instr, buffer, 100, &retCount);
-    //     if (status < VI_SUCCESS)
-    //     {
-    //       printf("Error reading a response from the device\n");
-    //     }
-    //     else
-    //     {
-    //       printf("Data read: %*s\n", retCount, buffer);
-    //     }
-    //     status = viClose(instr);
-    //   }
-    // }
-    // {
-    //   /* stay in this loop until we find all instruments */
-    //   status = viFindNext(findList, instrDescriptor); /* find next desriptor */
-    //   if (status < VI_SUCCESS)
-    //   { /* did we find the next resource? */
-    //     printf("An error occurred finding the next resource.\nHit enter to continue.");
-    //     fflush(stdin);
-    //     getchar();
-    //     viClose(defaultRM);
-    //     return status;
-    //   }
-    //   printf("%s \n", instrDescriptor);
-
-    //   /* Now we will open a session to the instrument we just found */
-    //   status = viOpen(defaultRM, instrDescriptor, VI_NULL, VI_NULL, &instr);
-    //   if (status < VI_SUCCESS)
-    //     printf("An error occurred opening a session to %s\n", instrDescriptor);
-    //   else
-    // } /* end while */
+    else if (json_object_get(obj, "client") != NULL)
+    {
+      if (json_integer_value(json_object_get(obj, "client")) == CLIENT_DEV_CONF)
+      {
+        json_object_del(obj, "client");
+        // instr_add_query(obj);
+      }
+    }
+    free(msg);
   }
-  printf("Found instruments: %d\n", numInstrs);
 
-  status = viClose(fList);
-  status = viClose(defaultRM);
+  /* It could be a CLOSE message as well. */
+  if (is_close)
+  {
+    LOGGER("Got close signal\n");
+    return 0;
+  }
 
-  return 0;
+  /* Return 1 to keep the connection open */
+  return 1;
+}
+
+/* Callback for handling a close message received from the server */
+static void
+websocket_client_close_handler(const struct mg_connection *conn,
+                               void *user_data)
+{
+  CLOSENOW = 1;
+  LOGGER("[INFO] Disconnected.\n");
+}
+
+/* Websocket client test function */
+int run_websocket_client(const char *host,
+                         int port,
+                         int secure,
+                         const char *path,
+                         const char *greetings)
+{
+  struct mg_connection *conn = NULL;
+  char *buff = NULL, err_buf[100] = {0};
+  json_t *obj = json_object();
+
+  /* INSTR_CONN_READY */
+  /* First seek for local installed instrument server */
+  LOGGER("[INFO] Searching for local server ... ");
+  // conn = mg_connect_websocket_client(LOCALHOST,
+  //                                    LOCALPORT,
+  //                                    secure,
+  //                                    err_buf,
+  //                                    sizeof(err_buf),
+  //                                    path,
+  //                                    NULL,
+  //                                    websocket_client_data_handler,
+  //                                    websocket_client_close_handler,
+  //                                    NULL);
+  if (conn == NULL)
+  {
+    LOGGER("Not found.\n");
+    /* Connect to the given WS or WSS (WS secure) server */
+    LOGGER("[INFO] Connecting to remote server %s ... ", host);
+    conn = mg_connect_websocket_client(host,
+                                       port,
+                                       secure,
+                                       err_buf,
+                                       sizeof(err_buf),
+                                       path,
+                                       NULL,
+                                       websocket_client_data_handler,
+                                       websocket_client_close_handler,
+                                       NULL);
+  }
+  if (conn == NULL)
+  {
+    LOGGER("\n[ERROR] Connection could not be established. (%s)\n", err_buf);
+    CLOSENOW = 1;
+    return 0;
+  }
+  LOGGER("OKAY.\n");
+  CLOSENOW = 0;
+  json_object_set(obj, "instr", json_integer(INSTR_CONN_READY));
+  buff = json_dumps(obj, JSON_COMPACT);
+  mg_websocket_client_write(conn, MG_WEBSOCKET_OPCODE_TEXT, buff, strlen(buff) + 1);
+  json_object_clear(obj);
+  free(buff);
+
+  /* INSTR_DEV_LIST */
+  if (!instr_list(obj))
+  {
+    LOGGER("[ERROR] %s\n", json_string_value(json_object_get(obj, "err")));
+    EXITNOW = CLOSENOW = 1;
+    return 0;
+  }
+  buff = json_dumps(obj, JSON_COMPACT);
+  mg_websocket_client_write(conn, MG_WEBSOCKET_OPCODE_TEXT, buff, strlen(buff) + 1);
+  json_object_clear(obj);
+  free(buff);
+
+  // /* INSTR_DEV_READY */
+  // if (!instr_connect(obj))
+  // {
+  //   LOGGER("[ERROR] %s\n", json_string_value(json_object_get(obj, "err")));
+  //   EXITNOW = CLOSENOW = 1;
+  //   return 0;
+  // }
+  // buff = json_dumps(obj, JSON_COMPACT);
+  // mg_websocket_client_write(conn, MG_WEBSOCKET_OPCODE_TEXT, buff, strlen(buff) + 1);
+  // json_object_clear(obj);
+  // free(buff);
+
+  // /* INSTR_DEV_INFO */
+  // if (!instr_info(obj))
+  // {
+  //   LOGGER("[ERROR] %s\n", json_string_value(json_object_get(obj, "err")));
+  //   EXITNOW = CLOSENOW = 1;
+  //   return 0;
+  // }
+  // buff = json_dumps(obj, JSON_COMPACT);
+  // mg_websocket_client_write(conn, MG_WEBSOCKET_OPCODE_TEXT, buff, strlen(buff) + 1);
+  // json_object_clear(obj);
+  // free(buff);
+
+  // LOGGER("[INFO] Waiting for UI initialization ...");
+  // Sleep(1000);
+  // LOGGER("OKAY.\n");
+
+  // LOGGER("[INFO] Started streaming.\n");
+  // int counter = 0;
+  // while (CLOSENOW < 1)
+  // {
+  //   /* INSTR_DEV_CONF */
+  //   if (!instr_conf(obj))
+  //   {
+  //     LOGGER("[ERROR] %s\n", json_string_value(json_object_get(obj, "err")));
+  //     CLOSENOW = 1;
+  //     return 0;
+  //   }
+  //   buff = json_dumps(obj, JSON_COMPACT);
+  //   mg_websocket_client_write(conn, MG_WEBSOCKET_OPCODE_TEXT, buff, strlen(buff) + 1);
+  //   json_object_clear(obj);
+  //   free(buff);
+
+  //   /* INSTR_DEV_DATA */
+  //   if (!instr_data(obj))
+  //   {
+  //     LOGGER("[ERROR] %s\n", json_string_value(json_object_get(obj, "err")));
+  //     CLOSENOW = 1;
+  //     return 0;
+  //   }
+  //   buff = json_dumps(obj, JSON_COMPACT);
+  //   mg_websocket_client_write(conn, MG_WEBSOCKET_OPCODE_TEXT, buff, strlen(buff) + 1);
+  //   json_object_clear(obj);
+  //   free(buff);
+
+  //   // LOGGER("[INFO] Stream count: %d", ++counter);
+  //   Sleep(STREAM_INTERVAL);
+  // }
+
+  // instr_disconnect();
+  json_decref(obj);
+  Sleep(3000);
+  CLOSENOW = 1;
+  mg_close_connection(conn);
+  return 1;
+}
+
+/* main will initialize the CivetWeb library
+ * and start the WebSocket client test function */
+int main(int argc, char *argv[])
+{
+  char path[100] = {'\0'};
+  char cid[10] = {'\0'};
+
+  LOGGER(INTRO);
+
+  LOGGER("[INFO] Initializing websocket framework ... ");
+  if (mg_init_library(0))
+  {
+    LOGGER("\n[ERROR] Cannot start websocket framework.\n");
+    return EXIT_FAILURE;
+  }
+  LOGGER("OKAY.\n");
+
+  int counter = 0;
+  while (!EXITNOW)
+  {
+    if (counter % RETRY_COUNT == 0)
+    {
+      LOGGER("Enter cid code: ");
+      scanf("%s", &cid);
+      sprintf(path, "/websocket?_signalregistry=%s&side=2", cid);
+    }
+
+    run_websocket_client(HOST, PORT, 0, path, NULL);
+    while (!CLOSENOW)
+      Sleep(1000);
+
+    counter++;
+    if (counter % RETRY_COUNT != 0)
+      LOGGER("[INFO] Retry connecting ...\n");
+    Sleep(500);
+  }
 }
