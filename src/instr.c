@@ -1,81 +1,104 @@
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #pragma warning(disable : 4996)
 
 #include "instr.h"
 
 #include "jansson.h"
 
-int instr_list()
+// Visa Parameters
+static ViStatus visaStatus;                         // Error checking
+static ViSession visaDefault, visaInstr;            // Instrument handler
+static ViUInt32 visaNumInstrs;                      // Number of found instruments
+static ViFindList visaFoundInstrList;               // Found instruments
+static ViChar visaFoundInstrBuffer[VI_FIND_BUFLEN]; // find buffer
+static char visaWriteBuffer[512];                   // write buffer
+static ViUInt32 visaWriteCount;                     // write count
+static ViUInt32 visaRetCount;                       // read return count,
+static unsigned char visaReadBuffer[100000];        // read buffer
+
+int instr_connect(json_t *obj)
 {
   visaStatus = viOpenDefaultRM(&visaDefault);
   if (visaStatus < VI_SUCCESS)
     return 0;
 
   visaStatus = viFindRsrc(visaDefault, "?*", &visaFoundInstrList, &visaNumInstrs, visaFoundInstrBuffer);
-  if (visaStatus == VI_ERROR_INV_OBJECT)
-    printf("Invalid object\n");
-  else if (visaStatus == VI_ERROR_NSUP_OPER)
-    printf("Session does not support operation\n");
-  else if (visaStatus == VI_ERROR_INV_EXPR)
-    printf("Invalid expression\n");
-  else if (visaStatus == VI_ERROR_RSRC_NFOUND)
+  if (visaStatus == VI_ERROR_RSRC_NFOUND)
+  {
+    json_object_set_new(obj, "instr", json_integer(INSTR_DEV_ERROR));
+    json_object_set_new(obj, "err", json_string("VI_ERROR_RSRC_NFOUND"));
     printf("Resource not found\n");
-  else
-    return 1;
+    return 0;
+  }
+  else if (visaStatus < VI_SUCCESS)
+  {
+    json_object_set_new(obj, "instr", json_integer(INSTR_DEV_ERROR));
+    json_object_set_new(obj, "err", json_string("VI_ERROR"));
+    return 0;
+  }
+
+  for (unsigned i = 0; i < visaNumInstrs; i++)
+  {
+    printf("Instrument : %d - %s ... ", i, visaFoundInstrBuffer);
+    visaStatus = viOpen(visaDefault, visaFoundInstrBuffer, VI_NULL, VI_NULL, &visaInstr);
+    if (visaStatus < VI_SUCCESS)
+    {
+      printf("Not avaliable.\n");
+      visaStatus = viFindNext(visaFoundInstrList, visaFoundInstrBuffer); /* find next desriptor */
+      continue;
+    }
+    printf("Connected.\n");
+    visaStatus = viSetAttribute(visaInstr, VI_ATTR_TMO_VALUE, 5000);
+
+    printf("Status : ");
+    strcpy(visaWriteBuffer, "*IDN?");
+    visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+    if (visaStatus < VI_SUCCESS)
+    {
+      printf("Not supported.\n");
+      visaStatus = viFindNext(visaFoundInstrList, visaFoundInstrBuffer); /* find next desriptor */
+      continue;
+    }
+    visaStatus = viRead(visaInstr, visaReadBuffer, 100000, &visaRetCount);
+    if (visaStatus < VI_SUCCESS)
+    {
+      printf("Not supported.\n");
+      visaStatus = viFindNext(visaFoundInstrList, visaFoundInstrBuffer); /* find next desriptor */
+      continue;
+    }
+    if (strstr(visaReadBuffer, "MS20") == NULL)
+    {
+      printf("Not supported.\n");
+      visaStatus = viFindNext(visaFoundInstrList, visaFoundInstrBuffer); /* find next desriptor */
+      continue;
+    }
+    printf("Supported - %s.\n", visaReadBuffer);
+    break;
+  }
+  // tolower
+  return 1;
 }
 
-// int instr_connect(json_t *obj)
-// {
-//   char err_buff[100] = {'\0'};
+void instr_disconnect()
+{
+  visaStatus = viClose(visaFoundInstrList);
+  visaStatus = viClose(visaInstr);
+  visaStatus = viClose(visaDefault);
+}
 
-//   // Init COM subsystem
-//   if (CoInitialize(NULL) != S_OK)
-//     strcpy(err_buff, "Unable to initalize COM subsystem.");
-
-//   if (pNWA.CreateInstance(__uuidof(TRVNA)) == S_OK)
-//   {
-//     if (!pNWA->Ready)
-//     {
-//       for (int i = 0; i < 33; i++)
-//       { // Wait for Hardware to be ready, up to 10 seconds.
-//         Sleep(300);
-//         if (pNWA->Ready)
-//           break;
-//       }
-//     }
-//     if (!pNWA->Ready)
-//       strcpy(err_buff, "Timeout reached for TRVNA app.");
-//   }
-//   else
-//     strcpy(err_buff, "Unable to open TRVNA app.");
-//   if (err_buff[0] != '\0')
-//   {
-//     json_object_set_new(obj, "instr", json_integer(INSTR_DEV_ERROR));
-//     json_object_set_new(obj, "err", json_string(err_buff));
-//     return 0;
-//   }
-//   else
-//   {
-//     json_object_set_new(obj, "instr", json_integer(INSTR_DEV_READY));
-//     return 1;
-//   }
-// }
-
-// void instr_disconnect()
-// {
-//   pNWA.Release();
-//   CoUninitialize();
-// }
-
-// int instr_info(json_t *obj)
-// {
-//   json_object_set_new(obj, "instr", json_integer(INSTR_DEV_INFO));
-//   json_object_set_new(obj, "mode", json_integer(INSTR_MODE_VNA));
-//   json_object_set_new(obj, "id", json_string((char *)pNWA->NAME));
-//   json_object_set_new(obj, "ui", json_string(instr_ui));
-//   return 1;
-// }
+int instr_info(json_t *obj)
+{
+  json_object_set_new(obj, "instr", json_integer(INSTR_DEV_INFO));
+  json_object_set_new(obj, "mode", json_integer(INSTR_MODE_VNA));
+  strcpy(visaWriteBuffer, "*IDN?");
+  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, 100000, &visaRetCount);
+  json_object_set_new(obj, "id", json_string(visaReadBuffer));
+  json_object_set_new(obj, "ui", json_string(instr_ui));
+  return 1;
+}
 
 // int instr_conf(json_t *obj)
 // {
