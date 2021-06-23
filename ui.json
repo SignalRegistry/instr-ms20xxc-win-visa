@@ -1,0 +1,1 @@
+"[{\"name\":\"Frequency/Time/Distance\",\"items\":[{\"name\":\"Start\",\"scpi\":\"SENS:FREQ:STAR\"},{\"name\":\"Stop\",\"scpi\":\"SENS:FREQ:STOP\"}]}]"
