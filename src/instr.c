@@ -112,11 +112,24 @@ int instr_conf(json_t *obj)
         // Freq/Time/Dist
         if (strcmp(key, "SENS:FREQ:STAR") == 0)
         {
-          strcpy(visaWriteBuffer, ":SENSe:FREQuency:STARt 1000000000");
+          sprintf(visaWriteBuffer, "%s %f", ":SENSe:FREQuency:STARt", atof(json_string_value(value)));
           visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
         }
-        //         else if (strcmp(key, "SENS:FREQ:STOP") == 0)
-        //           pNWA->SCPI->SENSe[active_channel]->FREQuency->STOP = atof(json_string_value(value));
+        else if (strcmp(key, "SENS:FREQ:STOP") == 0)
+        {
+          sprintf(visaWriteBuffer, "%s %f", ":SENSe:FREQuency:STOP", atof(json_string_value(value)));
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
+        else if (strcmp(key, "SENS:FREQ:CENT") == 0)
+        {
+          sprintf(visaWriteBuffer, "%s %f", ":SENSe:FREQuency:CENTer", atof(json_string_value(value)));
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
+        else if (strcmp(key, "SENS:FREQ:SPAN") == 0)
+        {
+          sprintf(visaWriteBuffer, "%s %f", ":SENSe:FREQuency:SPAN", atof(json_string_value(value)));
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
         //         else if (strcmp(key, "SENS:SWE:POIN") == 0)
         //           pNWA->SCPI->SENSe[active_channel]->SWEep->POINts = atol(json_string_value(value));
         //         // Response

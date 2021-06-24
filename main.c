@@ -53,6 +53,7 @@ static inline void LOGGER(const char *fmt, ...)
 static int CLOSENOW = 0;
 static int EXITNOW = 0;
 static int RETRY_COUNT = 50;
+static int LOCALHOST_EXIST = 1;
 
 enum CLIENT_MSG_TYPE
 {
@@ -173,18 +174,22 @@ int run_websocket_client(const char *host,
   /* INSTR_CONN_READY */
   /* First seek for local installed instrument server */
   LOGGER("[INFO] Searching for local server ... ");
-  // conn = mg_connect_websocket_client(LOCALHOST,
-  //                                    LOCALPORT,
-  //                                    secure,
-  //                                    err_buf,
-  //                                    sizeof(err_buf),
-  //                                    path,
-  //                                    NULL,
-  //                                    websocket_client_data_handler,
-  //                                    websocket_client_close_handler,
-  //                                    NULL);
+  // if (LOCALHOST_EXIST == 1)
+  // {
+  //   conn = mg_connect_websocket_client(LOCALHOST,
+  //                                      LOCALPORT,
+  //                                      secure,
+  //                                      err_buf,
+  //                                      sizeof(err_buf),
+  //                                      path,
+  //                                      NULL,
+  //                                      websocket_client_data_handler,
+  //                                      websocket_client_close_handler,
+  //                                      NULL);
+  // }
   if (conn == NULL)
   {
+    LOCALHOST_EXIST = 0;
     LOGGER("Not found.\n");
     /* Connect to the given WS or WSS (WS secure) server */
     LOGGER("[INFO] Connecting to remote server %s ... ", host);
