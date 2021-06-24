@@ -7,6 +7,7 @@
               "//                    Version: 1.0.0                                      //\n" \
               "////////////////////////////////////////////////////////////////////////////\n"
 
+#define VERSION "1.0.0"
 #define DEBUG_LOG
 
 #define LOCALHOST "localhost"
@@ -132,7 +133,7 @@ websocket_client_data_handler(struct mg_connection *conn,
       if (json_integer_value(json_object_get(obj, "client")) == CLIENT_DEV_CONF)
       {
         json_object_del(obj, "client");
-        // instr_add_query(obj);
+        instr_add_query(obj);
       }
     }
     free(msg);
@@ -207,6 +208,7 @@ int run_websocket_client(const char *host,
   LOGGER("OKAY.\n");
   CLOSENOW = 0;
   json_object_set(obj, "instr", json_integer(INSTR_CONN_READY));
+  json_object_set(obj, "version", json_string(VERSION));
   buff = json_dumps(obj, JSON_COMPACT);
   mg_websocket_client_write(conn, MG_WEBSOCKET_OPCODE_TEXT, buff, strlen(buff) + 1);
   json_object_clear(obj);

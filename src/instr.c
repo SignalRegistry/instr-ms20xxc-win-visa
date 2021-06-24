@@ -77,7 +77,6 @@ int instr_connect(json_t *obj)
     printf("Supported - %s.\n", visaReadBuffer);
     break;
   }
-  // tolower
   return 1;
 }
 
@@ -96,105 +95,107 @@ int instr_info(json_t *obj)
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
   visaStatus = viRead(visaInstr, visaReadBuffer, 100000, &visaRetCount);
   json_object_set_new(obj, "id", json_string(visaReadBuffer));
-  json_object_set_new(obj, "ui", json_string(instr_ui));
   return 1;
 }
 
 int instr_conf(json_t *obj)
 {
-  //   // SET
-  //   for (int i = 0; i < INSTR_MAX_QUERY_SIZE; i++)
-  //   {
-  //     if (instr_queries[i] != NULL)
-  //     {
-  //       const char *key;
-  //       json_t *value;
-  //       json_object_foreach(instr_queries[i], key, value)
-  //       {
-  //         // Stimulus
-  //         if (strcmp(key, "SENS:FREQ:STAR") == 0)
-  //           pNWA->SCPI->SENSe[active_channel]->FREQuency->STARt = atof(json_string_value(value));
-  //         else if (strcmp(key, "SENS:FREQ:STOP") == 0)
-  //           pNWA->SCPI->SENSe[active_channel]->FREQuency->STOP = atof(json_string_value(value));
-  //         else if (strcmp(key, "SENS:SWE:POIN") == 0)
-  //           pNWA->SCPI->SENSe[active_channel]->SWEep->POINts = atol(json_string_value(value));
-  //         // Response
-  //         else if (strcmp(key, "CALC:FORM") == 0)
-  //           pNWA->SCPI->CALCulate[active_channel]->SELected->FORMat = json_string_value(value);
-  //         else if (strcmp(key, "CALC:PAR:DEF") == 0)
-  //           pNWA->SCPI->CALCulate[active_channel]->PARameter[active_trace]->DEFine = json_string_value(value);
-  //         // Scale
-  //         else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:PDIV") == 0)
-  //           pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->PDIVision = atof(json_string_value(value));
-  //         else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:RLEV") == 0)
-  //           pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->RLEVel = atof(json_string_value(value));
-  //         else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:RPOS") == 0)
-  //           pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->RPOSition = atol(json_string_value(value));
-  //         else if (strcmp(key, "DISP:WIND:Y:SCAL:DIV") == 0)
-  //           pNWA->SCPI->DISPlay->WINDow[active_channel]->Y->SCALe->DIVisions = atol(json_string_value(value));
-  //         else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:AUTO") == 0)
-  //           pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->AUTO();
-  //         // Channels
-  //         else if (strcmp(key, "CALC") == 0)
-  //         {
-  //           if (atol(json_string_value(value)) == 3)
-  //             pNWA->SCPI->DISPlay->SPLit = 4;
-  //           else if (atol(json_string_value(value)) == 4)
-  //             pNWA->SCPI->DISPlay->SPLit = 6;
-  //           else if (atol(json_string_value(value)) == 6)
-  //             pNWA->SCPI->DISPlay->SPLit = 8;
-  //           else if (atol(json_string_value(value)) == 8)
-  //             pNWA->SCPI->DISPlay->SPLit = 9;
-  //           else if (atol(json_string_value(value)) == 9)
-  //             pNWA->SCPI->DISPlay->SPLit = 10;
-  //           else
-  //             pNWA->SCPI->DISPlay->SPLit = atol(json_string_value(value));
-  //           // check active channel
-  //           if (active_channel > atol(json_string_value(value)))
-  //             active_channel = atol(json_string_value(value));
-  //           // check active trace
-  //           if (active_trace > pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt)
-  //           {
-  //             active_trace = pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt;
-  //             pNWA->SCPI->CALCulate[active_channel]->PARameter[active_trace]->SELect();
-  //             pNWA->SCPI->DISPlay->WINDow[active_channel]->MAXimize;
-  //           }
-  //         }
-  //         else if (strcmp(key, "CALC:ACT") == 0)
-  //         {
-  //           if (atol(json_string_value(value)) <= channel_count)
-  //             active_channel = atol(json_string_value(value));
-  //           else
-  //             active_channel = channel_count;
-  //           pNWA->SCPI->DISPlay->WINDow[active_channel]->ACTivate();
-  //           pNWA->SCPI->DISPlay->MAXimize;
-  //           // check active trace
-  //           if (active_trace > pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt)
-  //           {
-  //             active_trace = 1;
-  //             pNWA->SCPI->CALCulate[active_channel]->PARameter[active_trace]->SELect();
-  //             pNWA->SCPI->DISPlay->WINDow[active_channel]->MAXimize;
-  //           }
-  //         }
-  //         else if (strcmp(key, "CALC:PAR:COUN") == 0)
-  //           pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt = atol(json_string_value(value));
-  //         else if (strcmp(key, "CALC:PAR:SEL") == 0)
-  //         {
-  //           if (atol(json_string_value(value)) <= trace_count)
-  //             active_trace = atol(json_string_value(value));
-  //           else
-  //             active_trace = trace_count;
-  //           pNWA->SCPI->CALCulate[active_channel]->PARameter[atol(json_string_value(value))]->SELect();
-  //           pNWA->SCPI->DISPlay->WINDow[active_channel]->MAXimize;
-  //         }
-  //         // printf("%s: %lu\n", key, atol(json_string_value(value)));
-  //       }
-  //       json_decref(instr_queries[i]);
-  //       instr_queries[i] = NULL;
-  //     }
-  //     else
-  //       break;
-  // }
+  // SET
+  for (int i = 0; i < INSTR_MAX_QUERY_SIZE; i++)
+  {
+    if (instr_queries[i] != NULL)
+    {
+      const char *key;
+      json_t *value;
+      json_object_foreach(instr_queries[i], key, value)
+      {
+        // Freq/Time/Dist
+        if (strcmp(key, "SENS:FREQ:STAR") == 0)
+        {
+          strcpy(visaWriteBuffer, ":SENSe:FREQuency:STARt 1000000000");
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
+        //         else if (strcmp(key, "SENS:FREQ:STOP") == 0)
+        //           pNWA->SCPI->SENSe[active_channel]->FREQuency->STOP = atof(json_string_value(value));
+        //         else if (strcmp(key, "SENS:SWE:POIN") == 0)
+        //           pNWA->SCPI->SENSe[active_channel]->SWEep->POINts = atol(json_string_value(value));
+        //         // Response
+        //         else if (strcmp(key, "CALC:FORM") == 0)
+        //           pNWA->SCPI->CALCulate[active_channel]->SELected->FORMat = json_string_value(value);
+        //         else if (strcmp(key, "CALC:PAR:DEF") == 0)
+        //           pNWA->SCPI->CALCulate[active_channel]->PARameter[active_trace]->DEFine = json_string_value(value);
+        //         // Scale
+        //         else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:PDIV") == 0)
+        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->PDIVision = atof(json_string_value(value));
+        //         else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:RLEV") == 0)
+        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->RLEVel = atof(json_string_value(value));
+        //         else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:RPOS") == 0)
+        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->RPOSition = atol(json_string_value(value));
+        //         else if (strcmp(key, "DISP:WIND:Y:SCAL:DIV") == 0)
+        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->Y->SCALe->DIVisions = atol(json_string_value(value));
+        //         else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:AUTO") == 0)
+        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->AUTO();
+        //         // Channels
+        //         else if (strcmp(key, "CALC") == 0)
+        //         {
+        //           if (atol(json_string_value(value)) == 3)
+        //             pNWA->SCPI->DISPlay->SPLit = 4;
+        //           else if (atol(json_string_value(value)) == 4)
+        //             pNWA->SCPI->DISPlay->SPLit = 6;
+        //           else if (atol(json_string_value(value)) == 6)
+        //             pNWA->SCPI->DISPlay->SPLit = 8;
+        //           else if (atol(json_string_value(value)) == 8)
+        //             pNWA->SCPI->DISPlay->SPLit = 9;
+        //           else if (atol(json_string_value(value)) == 9)
+        //             pNWA->SCPI->DISPlay->SPLit = 10;
+        //           else
+        //             pNWA->SCPI->DISPlay->SPLit = atol(json_string_value(value));
+        //           // check active channel
+        //           if (active_channel > atol(json_string_value(value)))
+        //             active_channel = atol(json_string_value(value));
+        //           // check active trace
+        //           if (active_trace > pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt)
+        //           {
+        //             active_trace = pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt;
+        //             pNWA->SCPI->CALCulate[active_channel]->PARameter[active_trace]->SELect();
+        //             pNWA->SCPI->DISPlay->WINDow[active_channel]->MAXimize;
+        //           }
+        //         }
+        //         else if (strcmp(key, "CALC:ACT") == 0)
+        //         {
+        //           if (atol(json_string_value(value)) <= channel_count)
+        //             active_channel = atol(json_string_value(value));
+        //           else
+        //             active_channel = channel_count;
+        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->ACTivate();
+        //           pNWA->SCPI->DISPlay->MAXimize;
+        //           // check active trace
+        //           if (active_trace > pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt)
+        //           {
+        //             active_trace = 1;
+        //             pNWA->SCPI->CALCulate[active_channel]->PARameter[active_trace]->SELect();
+        //             pNWA->SCPI->DISPlay->WINDow[active_channel]->MAXimize;
+        //           }
+        //         }
+        //         else if (strcmp(key, "CALC:PAR:COUN") == 0)
+        //           pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt = atol(json_string_value(value));
+        //         else if (strcmp(key, "CALC:PAR:SEL") == 0)
+        //         {
+        //           if (atol(json_string_value(value)) <= trace_count)
+        //             active_trace = atol(json_string_value(value));
+        //           else
+        //             active_trace = trace_count;
+        //           pNWA->SCPI->CALCulate[active_channel]->PARameter[atol(json_string_value(value))]->SELect();
+        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->MAXimize;
+        //         }
+        //         // printf("%s: %lu\n", key, atol(json_string_value(value)));
+      }
+      json_decref(instr_queries[i]);
+      instr_queries[i] = NULL;
+    }
+    else
+      break;
+  }
 
   // GET
   json_object_set_new(obj, "instr", json_integer(INSTR_DEV_CONF));
@@ -202,20 +203,20 @@ int instr_conf(json_t *obj)
   strcpy(visaWriteBuffer, ":SENSe:FREQuency:STARt?");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
   visaStatus = viRead(visaInstr, visaReadBuffer, 100000, &visaRetCount);
-  json_object_set_new(obj, "SENS:FREQ:STAR",  json_real(atof(json_string_value(json_stringn(visaReadBuffer,visaRetCount)))));
+  json_object_set_new(obj, "SENS:FREQ:STAR", json_real(atof(json_string_value(json_stringn(visaReadBuffer, visaRetCount)))));
   strcpy(visaWriteBuffer, ":SENSe:FREQuency:STOP?");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
   visaStatus = viRead(visaInstr, visaReadBuffer, 100000, &visaRetCount);
-  json_object_set_new(obj, "SENS:FREQ:STOP",  json_real(atof(json_string_value(json_stringn(visaReadBuffer,visaRetCount)))));
-  // strcpy(visaWriteBuffer, ":SENSe:FREQuency:SPAN?");
-  // visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
-  // visaStatus = viRead(visaInstr, visaReadBuffer, 100000, &visaRetCount);
-  // json_object_set_new(obj, "SENS:FREQ:STOP",  json_real(atof(json_string_value(json_stringn(visaReadBuffer,visaRetCount)))));
-  // strcpy(visaWriteBuffer, ":SENSe:FREQuency:CENTer?");
-  // visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
-  // visaStatus = viRead(visaInstr, visaReadBuffer, 100000, &visaRetCount);
-  // json_object_set_new(obj, "SENS:FREQ:STOP",  json_real(atof(json_string_value(json_stringn(visaReadBuffer,visaRetCount)))));
-  
+  json_object_set_new(obj, "SENS:FREQ:STOP", json_real(atof(json_string_value(json_stringn(visaReadBuffer, visaRetCount)))));
+  strcpy(visaWriteBuffer, ":SENSe:FREQuency:CENTer?");
+  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, 100000, &visaRetCount);
+  json_object_set_new(obj, "SENS:FREQ:CENT", json_real(atof(json_string_value(json_stringn(visaReadBuffer, visaRetCount)))));
+  strcpy(visaWriteBuffer, ":SENSe:FREQuency:SPAN?");
+  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, 100000, &visaRetCount);
+  json_object_set_new(obj, "SENS:FREQ:SPAN", json_real(atof(json_string_value(json_stringn(visaReadBuffer, visaRetCount)))));
+
   // json_object_set_new(obj, "ui", json_string(instr_ui));
   //   json_object_set_new(obj, "SENS:FREQ:STAR", json_real(pNWA->SCPI->SENSe[active_channel]->FREQuency->STARt));
   //   json_object_set_new(obj, "SENS:FREQ:STOP", json_real(pNWA->SCPI->SENSe[active_channel]->FREQuency->STOP));
@@ -250,20 +251,54 @@ int instr_conf(json_t *obj)
   //   json_object_set_new(obj, "CALC:PAR:COUN", json_integer(trace_count));
   //   active_trace = pNWA->SCPI->SERVice->CHANnel[active_channel]->TRACe->ACTive;
   //   json_object_set_new(obj, "CALC:PAR:SEL", json_integer(active_trace));
+
+  // UI
+  json_t *cat, *subcat, *cats, *subcats, *options, *parameters;
+  cats = json_array();
+  // Freq/Time/Dist
+  cat = json_object();
+  json_object_set_new(cat, "name", json_string("Freq/Time/Dist"));
+  subcats = json_array();
+
+  subcat = json_object();
+  json_object_set_new(subcat, "name", json_string("Start"));
+  json_object_set_new(subcat, "scpi", json_string("SENS:FREQ:STAR"));
+  json_array_append_new(subcats, subcat);
+
+  subcat = json_object();
+  json_object_set_new(subcat, "name", json_string("Stop"));
+  json_object_set_new(subcat, "scpi", json_string("SENS:FREQ:STOP"));
+  json_array_append_new(subcats, subcat);
+
+  subcat = json_object();
+  json_object_set_new(subcat, "name", json_string("Center"));
+  json_object_set_new(subcat, "scpi", json_string("SENS:FREQ:CENT"));
+  json_array_append_new(subcats, subcat);
+
+  subcat = json_object();
+  json_object_set_new(subcat, "name", json_string("Span"));
+  json_object_set_new(subcat, "scpi", json_string("SENS:FREQ:SPAN"));
+  json_array_append_new(subcats, subcat);
+
+  json_object_set_new(cat, "items", subcats);
+  json_array_append_new(cats, cat);
+
+  json_object_set_new(obj, "ui", cats);
+
   return 1;
 }
 
-// void instr_add_query(json_t *obj)
-// {
-//   for (int i = 0; i < INSTR_MAX_QUERY_SIZE; ++i)
-//   {
-//     if (instr_queries[i] == NULL)
-//     {
-//       instr_queries[i] = obj;
-//       break;
-//     }
-//   }
-// }
+void instr_add_query(json_t *obj)
+{
+  for (int i = 0; i < INSTR_MAX_QUERY_SIZE; ++i)
+  {
+    if (instr_queries[i] == NULL)
+    {
+      instr_queries[i] = obj;
+      break;
+    }
+  }
+}
 
 // int instr_data(json_t *obj)
 // {

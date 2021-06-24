@@ -20,7 +20,6 @@ enum INSTR_MODE
   INSTR_MODE_VNA,
 };
 
-static const char *instr_ui = "[{\"name\":\"Frequency/Time/Distance\",\"items\":[{\"name\":\"Start\",\"scpi\":\"SENS:FREQ:STAR\"},{\"name\":\"Stop\",\"scpi\":\"SENS:FREQ:STOP\"}]}]";
 #define INSTR_MAX_QUERY_SIZE 50
 static json_t *instr_queries[INSTR_MAX_QUERY_SIZE];
 static int active_channel = 1;
@@ -30,9 +29,9 @@ static int trace_count = 1;
 
 int instr_connect(json_t *obj);
 int instr_info(json_t *obj);
-// int instr_conf(json_t *obj);
+int instr_conf(json_t *obj);
 // int instr_data(json_t *obj);
-// void instr_add_query(json_t *obj);
+void instr_add_query(json_t *obj);
 // void instr_disconnect();
 
 #endif
