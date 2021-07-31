@@ -68,7 +68,7 @@ int instr_connect(json_t *obj)
       visaStatus = viFindNext(visaFoundInstrList, visaFoundInstrBuffer); /* find next desriptor */
       continue;
     }
-    if (strstr(visaReadBuffer, "MS20") == NULL)
+    if (strstr(visaReadBuffer, "MS20") == NULL && strstr(visaReadBuffer, "ms20") == NULL)
     {
       printf("Not supported.\n");
       visaStatus = viFindNext(visaFoundInstrList, visaFoundInstrBuffer); /* find next desriptor */
