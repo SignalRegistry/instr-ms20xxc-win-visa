@@ -263,23 +263,23 @@ int run_websocket_client(const char *host,
     json_object_clear(obj);
     free(buff);
 
-    // /* INSTR_DEV_DATA */
-    // if (!instr_data(obj))
-    // {
-    //   LOGGER("[ERROR] %s\n", json_string_value(json_object_get(obj, "err")));
-    //   CLOSENOW = 1;
-    //   return 0;
-    // }
-    // buff = json_dumps(obj, JSON_COMPACT);
-    // mg_websocket_client_write(conn, MG_WEBSOCKET_OPCODE_TEXT, buff, strlen(buff) + 1);
-    // json_object_clear(obj);
-    // free(buff);
+    /* INSTR_DEV_DATA */
+    if (!instr_data(obj))
+    {
+      LOGGER("[ERROR] %s\n", json_string_value(json_object_get(obj, "err")));
+      CLOSENOW = 1;
+      return 0;
+    }
+    buff = json_dumps(obj, JSON_COMPACT);
+    mg_websocket_client_write(conn, MG_WEBSOCKET_OPCODE_TEXT, buff, strlen(buff) + 1);
+    json_object_clear(obj);
+    free(buff);
 
     // LOGGER("[INFO] Stream count: %d", ++counter);
     Sleep(STREAM_INTERVAL);
   }
 
-  // instr_disconnect();
+  instr_disconnect();
   json_decref(obj);
   Sleep(3000);
   CLOSENOW = 1;
