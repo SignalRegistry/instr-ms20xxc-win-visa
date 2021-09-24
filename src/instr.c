@@ -2,6 +2,13 @@
 #include <string.h>
 #include <ctype.h>
 #pragma warning(disable : 4996)
+#include <time.h>
+void timestamp()
+{
+    time_t ltime; /* calendar time */
+    ltime=time(NULL); /* get current cal time */
+    printf("%s\n",asctime( localtime(&ltime) ) );
+}
 
 #include "instr.h"
 
@@ -386,7 +393,7 @@ int instr_data(json_t *obj)
   trace = json_object();
   x = json_array();
   y1 = json_array();
-  char *data, *token;
+  const char *data, *token;
 
   strcpy(visaWriteBuffer, ":SENSe1:FREQuency:DATA?");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
@@ -397,16 +404,24 @@ int instr_data(json_t *obj)
     json_array_append_new(x, json_real(atof(token)));
     token = strtok(NULL, ",");
   }
+  timestamp();
+  printf("%s\n", data);
   
   strcpy(visaWriteBuffer, ":CALCulate1:DATA? FDATA");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  if (visaStatus < VI_SUCCESS)
+    printf("Write success.\n");
   visaStatus = viRead(visaInstr, visaReadBuffer, visaReadBufferSize, &visaRetCount);
+  if (visaStatus < VI_SUCCESS)
+    printf("Read success.\n");
   data = json_string_value(json_stringn(visaReadBuffer, visaRetCount));
   token = strtok(data+2+(data[1]-'0'), ",");
   while( token != NULL ) {
     json_array_append_new(y1, json_real(atof(token)));
     token = strtok(NULL, ",");
   }
+  printf("%s\n", data);
+
   json_object_set_new(trace, "x", x);
   json_object_set_new(trace, "y1", y1);
   json_array_append_new(traces, trace);
