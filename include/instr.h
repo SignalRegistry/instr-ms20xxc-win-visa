@@ -30,8 +30,8 @@ static int trace_count = 1;
 int instr_connect(json_t *obj);
 int instr_info(json_t *obj);
 int instr_conf(json_t *obj);
-// int instr_data(json_t *obj);
+int instr_data(json_t *obj);
 void instr_add_query(json_t *obj);
-// void instr_disconnect();
+void instr_disconnect();
 
 #endif
