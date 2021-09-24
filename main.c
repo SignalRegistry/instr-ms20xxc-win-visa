@@ -255,8 +255,7 @@ int run_websocket_client(const char *host,
     if (!instr_conf(obj))
     {
       LOGGER("[ERROR] %s\n", json_string_value(json_object_get(obj, "err")));
-      CLOSENOW = 1;
-      return 0;
+      break;
     }
     buff = json_dumps(obj, JSON_COMPACT);
     mg_websocket_client_write(conn, MG_WEBSOCKET_OPCODE_TEXT, buff, strlen(buff) + 1);
@@ -267,8 +266,7 @@ int run_websocket_client(const char *host,
     if (!instr_data(obj))
     {
       LOGGER("[ERROR] %s\n", json_string_value(json_object_get(obj, "err")));
-      CLOSENOW = 1;
-      return 0;
+      break;
     }
     buff = json_dumps(obj, JSON_COMPACT);
     mg_websocket_client_write(conn, MG_WEBSOCKET_OPCODE_TEXT, buff, strlen(buff) + 1);

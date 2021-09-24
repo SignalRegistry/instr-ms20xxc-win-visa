@@ -46,6 +46,8 @@ if (WIN32)
   else()
     message("JANSSON_LIB = ${JANSSON_LIB}")
   endif()
+
+  include_directories( ${instr-ms20xxc-win-visa_SOURCE_DIR}/vcpkg/installed/x86-windows/include )
 endif (WIN32)
 
 

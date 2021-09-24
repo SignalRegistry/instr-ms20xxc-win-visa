@@ -1,9 +1,12 @@
 {
   "C_Cpp.default.includePath": [
-    "C:\\Program Files (x86)\\IVI Foundation - NIVisa\\VISA\\WinNT\\Include"
+    "C:\\Program Files (x86)\\IVI Foundation\\VISA\\WinNT\\Include",
+    "${workspaceFolder}/include",
+    "${workspaceFolder}/vcpkg/installed/x86-windows/include"
   ],
   "files.associations": {
-    "visa.h": "c"
+    "visa.h": "c",
+    "instr.h": "c"
   },
   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }
