@@ -27,7 +27,6 @@ static ViUInt32 visaWriteCount;                     // write count
 static ViUInt32 visaRetCount;                       // read return count,
 static unsigned visaReadBufferSize = 1000000;
 static unsigned char visaReadBuffer[1000000]; // read buffer
-static ViAttrState visaTimeout = 60 * 1000;  // timeout in ms
 
 int instr_connect(json_t *obj)
 {
@@ -62,7 +61,7 @@ int instr_connect(json_t *obj)
       continue;
     }
     printf("Connected.\n");
-    visaStatus = viSetAttribute(visaInstr, VI_ATTR_TMO_VALUE, visaTimeout);
+    visaStatus = viSetAttribute(visaInstr, VI_ATTR_TMO_VALUE, 5000);
 
     printf("Status : ");
     strcpy(visaWriteBuffer, "*IDN?");
@@ -425,7 +424,6 @@ int instr_data(json_t *obj)
   {
     viStatusDesc(visaInstr, visaStatus, visaStatusErrorString);
     json_object_set_new(obj, "err", json_string(visaStatusErrorString));
-    free(visaReadBuffer);
     return 0;
   }
   data = json_string_value(json_stringn(visaReadBuffer, visaRetCount));
