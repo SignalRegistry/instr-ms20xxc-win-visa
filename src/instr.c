@@ -389,7 +389,7 @@ void instr_add_query(json_t *obj)
 
 int instr_data(json_t *obj)
 {
-  json_t *channels = NULL, *traces = NULL, *trace = NULL, *x = NULL, *y1 = NULL, *y2 = NULL;
+  json_t *channels = NULL, *traces = NULL, *trace = NULL, *x = NULL, *y1 = NULL, *y2 = NULL, *raw_data;
   json_object_set_new(obj, "instr", json_integer(INSTR_DEV_DATA));
 
   channels = json_array();
@@ -406,13 +406,16 @@ int instr_data(json_t *obj)
   strcpy(visaWriteBuffer, ":SENSe1:FREQuency:DATA?");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
   visaStatus = viRead(visaInstr, visaReadBuffer, visaReadBufferSize, &visaRetCount);
-  data = json_string_value(json_stringn(visaReadBuffer, visaRetCount));
+  raw_data = json_stringn(visaReadBuffer, visaRetCount);
+  data = malloc(sizeof(char) * visaRetCount);
+  strcpy(data, json_string_value(raw_data));
   token = strtok(data + 2 + (data[1] - '0'), ",");
   while (token != NULL)
   {
     json_array_append_new(x, json_real(atof(token)));
     token = strtok(NULL, ",");
   }
+  json_decref(raw_data);
   free(data);
 
   strcpy(visaWriteBuffer, ":CALCulate1:DATA? FDATA");
@@ -426,13 +429,16 @@ int instr_data(json_t *obj)
     json_object_set_new(obj, "err", json_string(visaStatusErrorString));
     return 0;
   }
-  data = json_string_value(json_stringn(visaReadBuffer, visaRetCount));
+  raw_data = json_stringn(visaReadBuffer, visaRetCount);
+  data = malloc(sizeof(char) * visaRetCount);
+  strcpy(data, json_string_value(raw_data));
   token = strtok(data + 2 + (data[1] - '0'), ",");
   while (token != NULL)
   {
     json_array_append_new(y1, json_real(atof(token)));
     token = strtok(NULL, ",");
   }
+  json_decref(raw_data);
   free(data);
 
   json_object_set_new(trace, "x", x);
