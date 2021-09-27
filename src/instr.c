@@ -25,8 +25,8 @@ static ViChar visaStatusErrorString[512];           // find buffer
 static char visaWriteBuffer[512];                   // write buffer
 static ViUInt32 visaWriteCount;                     // write count
 static ViUInt32 visaRetCount;                       // read return count,
-static unsigned visaReadBufferSize = 1000000;
-static unsigned char visaReadBuffer[1000000]; // read buffer
+#define VISA_READ_MAX_BUFFER_SIZE 1000000
+static char visaReadBuffer[VISA_READ_MAX_BUFFER_SIZE]; // read buffer
 
 int instr_connect(json_t *obj)
 {
@@ -61,7 +61,7 @@ int instr_connect(json_t *obj)
       continue;
     }
     printf("Connected.\n");
-    visaStatus = viSetAttribute(visaInstr, VI_ATTR_TMO_VALUE, 5000);
+    visaStatus = viSetAttribute(visaInstr, VI_ATTR_TMO_VALUE, 10000);
 
     printf("Status : ");
     strcpy(visaWriteBuffer, "*IDN?");
@@ -72,7 +72,7 @@ int instr_connect(json_t *obj)
       visaStatus = viFindNext(visaFoundInstrList, visaFoundInstrBuffer); /* find next desriptor */
       continue;
     }
-    visaStatus = viRead(visaInstr, visaReadBuffer, visaReadBufferSize, &visaRetCount);
+    visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
     if (visaStatus < VI_SUCCESS)
     {
       printf("Not supported.\n");
@@ -113,7 +113,7 @@ int instr_info(json_t *obj)
   json_object_set_new(obj, "mode", json_integer(INSTR_MODE_VNA));
   strcpy(visaWriteBuffer, "*IDN?");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
-  visaStatus = viRead(visaInstr, visaReadBuffer, visaReadBufferSize, &visaRetCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
   json_object_set_new(obj, "id", json_string(visaReadBuffer));
   return 1;
 }
@@ -246,30 +246,36 @@ int instr_conf(json_t *obj)
   // Frequency/Time/Distance
   strcpy(visaWriteBuffer, ":SENSe:FREQuency:STARt?");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
-  visaStatus = viRead(visaInstr, visaReadBuffer, visaReadBufferSize, &visaRetCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
   json_object_set_new(obj, "SENS:FREQ:STAR", json_real(atof(json_string_value(json_stringn(visaReadBuffer, visaRetCount)))));
   strcpy(visaWriteBuffer, ":SENSe:FREQuency:STOP?");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
-  visaStatus = viRead(visaInstr, visaReadBuffer, visaReadBufferSize, &visaRetCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
   json_object_set_new(obj, "SENS:FREQ:STOP", json_real(atof(json_string_value(json_stringn(visaReadBuffer, visaRetCount)))));
   strcpy(visaWriteBuffer, ":SENSe:FREQuency:CENTer?");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
-  visaStatus = viRead(visaInstr, visaReadBuffer, visaReadBufferSize, &visaRetCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
   json_object_set_new(obj, "SENS:FREQ:CENT", json_real(atof(json_string_value(json_stringn(visaReadBuffer, visaRetCount)))));
   strcpy(visaWriteBuffer, ":SENSe:FREQuency:SPAN?");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
-  visaStatus = viRead(visaInstr, visaReadBuffer, visaReadBufferSize, &visaRetCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
   json_object_set_new(obj, "SENS:FREQ:SPAN", json_real(atof(json_string_value(json_stringn(visaReadBuffer, visaRetCount)))));
 
   // Sweep
   strcpy(visaWriteBuffer, ":SENSe:SWEep:POINts?");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
-  visaStatus = viRead(visaInstr, visaReadBuffer, visaReadBufferSize, &visaRetCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
   json_object_set_new(obj, "SENS:SWE:POIN", json_integer(atol(json_string_value(json_stringn(visaReadBuffer, visaRetCount)))));
   strcpy(visaWriteBuffer, ":SENSe:SWEep:IFBW?");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
-  visaStatus = viRead(visaInstr, visaReadBuffer, visaReadBufferSize, &visaRetCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
   json_object_set_new(obj, "SENS:BAND:RES", json_real(atof(json_string_value(json_stringn(visaReadBuffer, visaRetCount)))));
+
+  // Measure
+  sprintf(visaWriteBuffer, ":CALCulate%d:FORMat?\0", active_trace);
+  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
+  json_object_set_new(obj, "CALC:FORM", json_stringn(visaReadBuffer, visaRetCount));
 
   // json_object_set_new(obj, "ui", json_string(instr_ui));
   //   json_object_set_new(obj, "SENS:FREQ:STAR", json_real(pNWA->SCPI->SENSe[active_channel]->FREQuency->STARt));
@@ -370,6 +376,28 @@ int instr_conf(json_t *obj)
   json_object_set_new(cat, "items", subcats);
   json_array_append_new(cats, cat);
 
+  // Measure
+  cat = json_object();
+  json_object_set_new(cat, "name", json_string("Measure"));
+  subcats = json_array();
+
+  subcat = json_object();
+  json_object_set_new(subcat, "name", json_string("Graph Type"));
+  json_object_set_new(subcat, "scpi", json_string("CALC:FORM"));
+  options = json_array();
+  json_array_append_new(options, json_string("LMAG"));
+  json_array_append_new(options, json_string("PHAS"));
+  json_array_append_new(options, json_string("GDEL"));
+  json_array_append_new(options, json_string("SWR"));
+  json_array_append_new(options, json_string("LM/2"));
+  json_array_append_new(options, json_string("REAL"));
+  json_array_append_new(options, json_string("IMAG"));
+  json_object_set_new(subcat, "options", options);
+  json_array_append_new(subcats, subcat);
+
+  json_object_set_new(cat, "items", subcats);
+  json_array_append_new(cats, cat);
+
   json_object_set_new(obj, "ui", cats);
 
   return 1;
@@ -389,7 +417,7 @@ void instr_add_query(json_t *obj)
 
 int instr_data(json_t *obj)
 {
-  json_t *channels = NULL, *traces = NULL, *trace = NULL, *x = NULL, *y1 = NULL, *y2 = NULL, *raw_data;
+  json_t *channels = NULL, *traces = NULL, *trace = NULL, *x = NULL, *y1 = NULL, *y2 = NULL;
   json_object_set_new(obj, "instr", json_integer(INSTR_DEV_DATA));
 
   channels = json_array();
@@ -397,49 +425,64 @@ int instr_data(json_t *obj)
   trace = json_object();
   x = json_array();
   y1 = json_array();
-  char *data, *token;
-  timestamp();
+  char *token;
+  char data[VISA_READ_MAX_BUFFER_SIZE];
 
-  visaStatus = viClose(visaInstr);
-  visaStatus = viOpen(visaDefault, visaFoundInstrBuffer, VI_NULL, VI_NULL, &visaInstr);
+  timestamp();
 
   strcpy(visaWriteBuffer, ":SENSe1:FREQuency:DATA?");
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
-  visaStatus = viRead(visaInstr, visaReadBuffer, visaReadBufferSize, &visaRetCount);
-  raw_data = json_stringn(visaReadBuffer, visaRetCount);
-  data = malloc(sizeof(char) * visaRetCount);
-  strcpy(data, json_string_value(raw_data));
-  token = strtok(data + 2 + (data[1] - '0'), ",");
-  while (token != NULL)
-  {
-    json_array_append_new(x, json_real(atof(token)));
-    token = strtok(NULL, ",");
-  }
-  json_decref(raw_data);
-  free(data);
-
-  strcpy(visaWriteBuffer, ":CALCulate1:DATA? FDATA");
-  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
-  if (visaStatus < VI_SUCCESS)
-    printf("Write success.\n");
-  visaStatus = viRead(visaInstr, visaReadBuffer, visaReadBufferSize, &visaRetCount);
   if (visaStatus < VI_SUCCESS)
   {
     viStatusDesc(visaInstr, visaStatus, visaStatusErrorString);
     json_object_set_new(obj, "err", json_string(visaStatusErrorString));
     return 0;
   }
-  raw_data = json_stringn(visaReadBuffer, visaRetCount);
-  data = malloc(sizeof(char) * visaRetCount);
-  strcpy(data, json_string_value(raw_data));
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
+  if (visaStatus < VI_SUCCESS)
+  {
+    viStatusDesc(visaInstr, visaStatus, visaStatusErrorString);
+    json_object_set_new(obj, "err", json_string(visaStatusErrorString));
+    return 0;
+  }
+  // printf("%s\n", visaReadBuffer);
+  // printf("%d\n", visaRetCount);
+  strncpy(data,visaReadBuffer, visaRetCount);
+  data[visaRetCount] = '\0';
+  token = strtok(data + 2 + (data[1] - '0'), ",");
+  while (token != NULL)
+  {
+    json_array_append_new(x, json_real(atof(token)));
+    token = strtok(NULL, ",");
+  }
+
+
+  strcpy(visaWriteBuffer, ":CALCulate1:DATA? FDATA");
+  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  if (visaStatus < VI_SUCCESS)
+  {
+    viStatusDesc(visaInstr, visaStatus, visaStatusErrorString);
+    json_object_set_new(obj, "err", json_string(visaStatusErrorString));
+    return 0;
+  }
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
+  if (visaStatus < VI_SUCCESS)
+  {
+    viStatusDesc(visaInstr, visaStatus, visaStatusErrorString);
+    json_object_set_new(obj, "err", json_string(visaStatusErrorString));
+    return 0;
+  }
+  // printf("%s\n", visaReadBuffer);
+  // printf("%d\n", visaRetCount);
+
+  strncpy(data, visaReadBuffer, visaRetCount);
+  data[visaRetCount] = '\0';
   token = strtok(data + 2 + (data[1] - '0'), ",");
   while (token != NULL)
   {
     json_array_append_new(y1, json_real(atof(token)));
     token = strtok(NULL, ",");
   }
-  json_decref(raw_data);
-  free(data);
 
   json_object_set_new(trace, "x", x);
   json_object_set_new(trace, "y1", y1);
