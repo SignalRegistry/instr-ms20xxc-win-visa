@@ -276,6 +276,22 @@ int instr_conf(json_t *obj)
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
   visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
   json_object_set_new(obj, "CALC:FORM", json_stringn(visaReadBuffer, visaRetCount));
+  sprintf(visaWriteBuffer, ":SENSe:TRACe%d:SPARams?\0", active_trace);
+  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
+  json_object_set_new(obj, "CALC:PAR", json_stringn(visaReadBuffer, visaRetCount));
+  sprintf(visaWriteBuffer, ":SENSe:TRACe:TOT?\0");
+  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
+  json_object_set_new(obj, "CALC:PAR:COUN", json_integer(atol(json_string_value(json_stringn(visaReadBuffer, visaRetCount)))));
+  sprintf(visaWriteBuffer, ":SENSe:TRACe:SELect?\0");
+  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
+  json_object_set_new(obj, "CALC:PAR:SEL", json_integer(atol(json_string_value(json_stringn(visaReadBuffer, visaRetCount))+2)));
+  sprintf(visaWriteBuffer, ":CALCulate%d:SMOothing:APERture?\0", active_trace);
+  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
+  json_object_set_new(obj, "SENS:SMO:APER", json_integer(atol(json_string_value(json_stringn(visaReadBuffer, visaRetCount)))));
 
   // json_object_set_new(obj, "ui", json_string(instr_ui));
   //   json_object_set_new(obj, "SENS:FREQ:STAR", json_real(pNWA->SCPI->SENSe[active_channel]->FREQuency->STARt));
@@ -313,7 +329,7 @@ int instr_conf(json_t *obj)
   //   json_object_set_new(obj, "CALC:PAR:SEL", json_integer(active_trace));
 
   // UI
-  json_t *cat, *subcat, *cats, *subcats, *options;
+  json_t *cat, *subcat, *cats, *subcats, *options, *parameters;
   cats = json_array();
   // Freq/Time/Dist
   cat = json_object();
@@ -372,6 +388,7 @@ int instr_conf(json_t *obj)
   json_array_append_new(options, json_string("10 Hz"));
   json_object_set_new(subcat, "options", options);
   json_array_append_new(subcats, subcat);
+  
 
   json_object_set_new(cat, "items", subcats);
   json_array_append_new(cats, cat);
@@ -393,6 +410,47 @@ int instr_conf(json_t *obj)
   json_array_append_new(options, json_string("REAL"));
   json_array_append_new(options, json_string("IMAG"));
   json_object_set_new(subcat, "options", options);
+  json_array_append_new(subcats, subcat);
+
+  subcat = json_object();
+  json_object_set_new(subcat, "name", json_string("S Parameter"));
+  json_object_set_new(subcat, "scpi", json_string("CALC:PAR"));
+  options = json_array();
+  json_array_append_new(options, json_string("S11"));
+  json_array_append_new(options, json_string("S21"));
+  json_array_append_new(options, json_string("S12"));
+  json_array_append_new(options, json_string("S22"));
+  json_object_set_new(subcat, "options", options);
+  json_array_append_new(subcats, subcat);
+
+  subcat = json_object();
+  json_object_set_new(subcat, "name", json_string("Number of Traces"));
+  json_object_set_new(subcat, "scpi", json_string("CALC:PAR:COUN"));
+  parameters = json_object();
+  json_object_set_new(parameters, "min", json_integer(1));
+  json_object_set_new(parameters, "max", json_integer(4));
+  json_object_set_new(parameters, "step", json_integer(1));
+  json_object_set_new(subcat, "number", parameters);
+  json_array_append_new(subcats, subcat);
+
+  subcat = json_object();
+  json_object_set_new(subcat, "name", json_string("Active Trace"));
+  json_object_set_new(subcat, "scpi", json_string("CALC:PAR:SEL"));
+  parameters = json_object();
+  json_object_set_new(parameters, "min", json_integer(1));
+  json_object_set_new(parameters, "max", json_integer(4));
+  json_object_set_new(parameters, "step", json_integer(1));
+  json_object_set_new(subcat, "number", parameters);
+  json_array_append_new(subcats, subcat);
+
+  subcat = json_object();
+  json_object_set_new(subcat, "name", json_string("Smoothing %"));
+  json_object_set_new(subcat, "scpi", json_string("SENS:SMO:APER"));
+  parameters = json_object();
+  json_object_set_new(parameters, "min", json_integer(1));
+  json_object_set_new(parameters, "max", json_integer(20));
+  json_object_set_new(parameters, "step", json_integer(1));
+  json_object_set_new(subcat, "number", parameters);
   json_array_append_new(subcats, subcat);
 
   json_object_set_new(cat, "items", subcats);
