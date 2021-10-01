@@ -341,17 +341,26 @@ int instr_conf(json_t *obj)
   json_object_set_new(obj, "SENS:SMO:APER", json_integer(atol(json_string_value(jstrbuff))));
   json_decref(jstrbuff);
 
-  // json_object_set_new(obj, "ui", json_string(instr_ui));
-  //   json_object_set_new(obj, "SENS:FREQ:STAR", json_real(pNWA->SCPI->SENSe[active_channel]->FREQuency->STARt));
-  //   json_object_set_new(obj, "SENS:FREQ:STOP", json_real(pNWA->SCPI->SENSe[active_channel]->FREQuency->STOP));
-  //   json_object_set_new(obj, "SENS:SWE:POIN", json_integer(pNWA->SCPI->SENSe[active_channel]->SWEep->POINts));
-  //   // Response
-  //   json_object_set_new(obj, "CALC:FORM", json_string(pNWA->SCPI->CALCulate[active_channel]->SELected->FORMat));
-  //   json_object_set_new(obj, "CALC:PAR:DEF", json_string(pNWA->SCPI->CALCulate[active_channel]->PARameter[active_trace]->DEFine));
-  //   // Scale
-  //   json_object_set_new(obj, "DISP:WIND:TRAC:Y:SCAL:PDIV", json_real(pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->PDIVision));
-  //   json_object_set_new(obj, "DISP:WIND:TRAC:Y:SCAL:RLEV", json_real(pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->RLEVel));
-  //   json_object_set_new(obj, "DISP:WIND:TRAC:Y:SCAL:RPOS", json_integer(pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->RPOSition));
+  // Scale
+  sprintf(visaWriteBuffer, ":DISPlay:WINDow:TRACe%d:Y:PDIVision?\0", active_trace);
+  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
+  jstrbuff = json_stringn(visaReadBuffer, visaRetCount);
+  json_object_set_new(obj, "DISP:WIND:TRAC:Y:SCAL:PDIV", json_real(atof(json_string_value(jstrbuff))));
+  json_decref(jstrbuff);
+  sprintf(visaWriteBuffer, ":DISPlay:WINDow:TRACe%d:Y:RLEVel?\0", active_trace);
+  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
+  jstrbuff = json_stringn(visaReadBuffer, visaRetCount);
+  json_object_set_new(obj, "DISP:WIND:TRAC:Y:SCAL:RLEV", json_real(atof(json_string_value(jstrbuff))));
+  json_decref(jstrbuff);
+  sprintf(visaWriteBuffer, ":DISPlay:WINDow:TRACe%d:Y:RPOSition?\0", active_trace);
+  visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+  visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
+  jstrbuff = json_stringn(visaReadBuffer, visaRetCount);
+  json_object_set_new(obj, "DISP:WIND:TRAC:Y:SCAL:RPOS", json_real(atof(json_string_value(jstrbuff))));
+  json_decref(jstrbuff);
+  
   //   json_object_set_new(obj, "DISP:WIND:Y:SCAL:DIV", json_integer(pNWA->SCPI->DISPlay->WINDow[active_channel]->Y->SCALe->DIVisions));
   //   // Channels
   //   long split_mode = pNWA->SCPI->DISPlay->SPLit;
@@ -503,6 +512,45 @@ int instr_conf(json_t *obj)
   json_object_set_new(parameters, "step", json_integer(1));
   json_object_set_new(subcat, "number", parameters);
   json_array_append_new(subcats, subcat);
+
+  json_object_set_new(cat, "items", subcats);
+  json_array_append_new(cats, cat);
+
+    // Scale
+  cat = json_object();
+  json_object_set_new(cat, "name", json_string("Scale"));
+  subcats = json_array();
+
+  subcat = json_object();
+  json_object_set_new(subcat, "name", json_string("Scale"));
+  json_object_set_new(subcat, "scpi", json_string("DISP:WIND:TRAC:Y:SCAL:PDIV"));
+  json_array_append_new(subcats, subcat);
+
+  subcat = json_object();
+  json_object_set_new(subcat, "name", json_string("Ref Value"));
+  json_object_set_new(subcat, "scpi", json_string("DISP:WIND:TRAC:Y:SCAL:RLEV"));
+  json_array_append_new(subcats, subcat);
+
+  subcat = json_object();
+  json_object_set_new(subcat, "name", json_string("Ref Position"));
+  json_object_set_new(subcat, "scpi", json_string("DISP:WIND:TRAC:Y:SCAL:RPOS"));
+  json_array_append_new(subcats, subcat);
+
+  // subcat = json_object();
+  // json_object_set_new(subcat, "name", json_string("Divisions"));
+  // json_object_set_new(subcat, "scpi", json_string("DISP:WIND:Y:SCAL:DIV"));
+  // parameters = json_object();
+  // json_object_set_new(parameters, "min", json_integer(4));
+  // json_object_set_new(parameters, "max", json_integer(20));
+  // json_object_set_new(parameters, "step", json_integer(2));
+  // json_object_set_new(subcat, "number", parameters);
+  // json_array_append_new(subcats, subcat);
+
+  // subcat = json_object();
+  // json_object_set_new(subcat, "name", json_string("Auto Scale"));
+  // json_object_set_new(subcat, "scpi", json_string("DISP:WIND:TRAC:Y:SCAL:AUTO"));
+  // json_object_set_new(subcat, "button", json_integer(1));
+  // json_array_append_new(subcats, subcat);
 
   json_object_set_new(cat, "items", subcats);
   json_array_append_new(cats, cat);
