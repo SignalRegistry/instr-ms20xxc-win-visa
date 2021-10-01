@@ -162,6 +162,33 @@ int instr_conf(json_t *obj)
           sprintf(visaWriteBuffer, "%s %d", ":SENSe:SWEep:IFBW", atol(json_string_value(value)));
           visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
         }
+        // Measure
+        else if (strcmp(key, "CALC:FORM") == 0)
+        {
+          sprintf(visaWriteBuffer, ":CALCulate%d:FORMat %s", active_trace, json_string_value(value));
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
+        else if (strcmp(key, "CALC:PAR") == 0)
+        {
+          sprintf(visaWriteBuffer, ":SENSe:TRACe%d:SPARams %s", active_trace, json_string_value(value));
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
+        else if (strcmp(key, "CALC:PAR:COUN") == 0)
+        {
+          sprintf(visaWriteBuffer, ":SENSe:TRACe:TOTal %d", atol(json_string_value(value)));
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
+        else if (strcmp(key, "CALC:PAR:SEL") == 0)
+        {
+          sprintf(visaWriteBuffer, ":SENSe:TRACe%d:SELect", atol(json_string_value(value)));
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
+        else if (strcmp(key, "SENS:SMO:APER") == 0)
+        {
+          sprintf(visaWriteBuffer, ":CALCulate%d:SMOothing:APERture %d", active_trace, atol(json_string_value(value)));
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
+
         //         else if (strcmp(key, "SENS:SWE:POIN") == 0)
         //           pNWA->SCPI->SENSe[active_channel]->SWEep->POINts = atol(json_string_value(value));
         //         // Response
