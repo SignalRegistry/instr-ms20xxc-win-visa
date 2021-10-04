@@ -181,6 +181,7 @@ int instr_conf(json_t *obj)
         else if (strcmp(key, "CALC:PAR:SEL") == 0)
         {
           sprintf(visaWriteBuffer, ":SENSe:TRACe%d:SELect", atol(json_string_value(value)));
+          active_trace = atoi(json_string_value(value));
           visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
         }
         else if (strcmp(key, "SENS:SMO:APER") == 0)
@@ -188,79 +189,27 @@ int instr_conf(json_t *obj)
           sprintf(visaWriteBuffer, ":CALCulate%d:SMOothing:APERture %d", active_trace, atol(json_string_value(value)));
           visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
         }
-
-        //         else if (strcmp(key, "SENS:SWE:POIN") == 0)
-        //           pNWA->SCPI->SENSe[active_channel]->SWEep->POINts = atol(json_string_value(value));
-        //         // Response
-        //         else if (strcmp(key, "CALC:FORM") == 0)
-        //           pNWA->SCPI->CALCulate[active_channel]->SELected->FORMat = json_string_value(value);
-        //         else if (strcmp(key, "CALC:PAR:DEF") == 0)
-        //           pNWA->SCPI->CALCulate[active_channel]->PARameter[active_trace]->DEFine = json_string_value(value);
-        //         // Scale
-        //         else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:PDIV") == 0)
-        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->PDIVision = atof(json_string_value(value));
-        //         else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:RLEV") == 0)
-        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->RLEVel = atof(json_string_value(value));
-        //         else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:RPOS") == 0)
-        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->RPOSition = atol(json_string_value(value));
-        //         else if (strcmp(key, "DISP:WIND:Y:SCAL:DIV") == 0)
-        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->Y->SCALe->DIVisions = atol(json_string_value(value));
-        //         else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:AUTO") == 0)
-        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->TRACe[active_trace]->Y->SCALe->AUTO();
-        //         // Channels
-        //         else if (strcmp(key, "CALC") == 0)
-        //         {
-        //           if (atol(json_string_value(value)) == 3)
-        //             pNWA->SCPI->DISPlay->SPLit = 4;
-        //           else if (atol(json_string_value(value)) == 4)
-        //             pNWA->SCPI->DISPlay->SPLit = 6;
-        //           else if (atol(json_string_value(value)) == 6)
-        //             pNWA->SCPI->DISPlay->SPLit = 8;
-        //           else if (atol(json_string_value(value)) == 8)
-        //             pNWA->SCPI->DISPlay->SPLit = 9;
-        //           else if (atol(json_string_value(value)) == 9)
-        //             pNWA->SCPI->DISPlay->SPLit = 10;
-        //           else
-        //             pNWA->SCPI->DISPlay->SPLit = atol(json_string_value(value));
-        //           // check active channel
-        //           if (active_channel > atol(json_string_value(value)))
-        //             active_channel = atol(json_string_value(value));
-        //           // check active trace
-        //           if (active_trace > pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt)
-        //           {
-        //             active_trace = pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt;
-        //             pNWA->SCPI->CALCulate[active_channel]->PARameter[active_trace]->SELect();
-        //             pNWA->SCPI->DISPlay->WINDow[active_channel]->MAXimize;
-        //           }
-        //         }
-        //         else if (strcmp(key, "CALC:ACT") == 0)
-        //         {
-        //           if (atol(json_string_value(value)) <= channel_count)
-        //             active_channel = atol(json_string_value(value));
-        //           else
-        //             active_channel = channel_count;
-        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->ACTivate();
-        //           pNWA->SCPI->DISPlay->MAXimize;
-        //           // check active trace
-        //           if (active_trace > pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt)
-        //           {
-        //             active_trace = 1;
-        //             pNWA->SCPI->CALCulate[active_channel]->PARameter[active_trace]->SELect();
-        //             pNWA->SCPI->DISPlay->WINDow[active_channel]->MAXimize;
-        //           }
-        //         }
-        //         else if (strcmp(key, "CALC:PAR:COUN") == 0)
-        //           pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt = atol(json_string_value(value));
-        //         else if (strcmp(key, "CALC:PAR:SEL") == 0)
-        //         {
-        //           if (atol(json_string_value(value)) <= trace_count)
-        //             active_trace = atol(json_string_value(value));
-        //           else
-        //             active_trace = trace_count;
-        //           pNWA->SCPI->CALCulate[active_channel]->PARameter[atol(json_string_value(value))]->SELect();
-        //           pNWA->SCPI->DISPlay->WINDow[active_channel]->MAXimize;
-        //         }
-        //         // printf("%s: %lu\n", key, atol(json_string_value(value)));
+        // Measure
+        else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:PDIV") == 0)
+        {
+          sprintf(visaWriteBuffer, ":DISPlay:WINDow:TRACe%d:Y:PDIVision %f", active_trace, atof(json_string_value(value)));
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
+        else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:RLEV") == 0)
+        {
+          sprintf(visaWriteBuffer, ":DISPlay:WINDow:TRACe%d:Y:RLEVel %f", active_trace, atof(json_string_value(value)));
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
+        else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:RPOS") == 0)
+        {
+          sprintf(visaWriteBuffer, ":DISPlay:WINDow:TRACe%d:Y:RPOSition %f", active_trace, atof(json_string_value(value)));
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
+        else if (strcmp(key, "DISP:WIND:TRAC:Y:SCAL:AUTO") == 0)
+        {
+          sprintf(visaWriteBuffer, ":DISPlay:WINDow:TRACe%d:RLEVel IMMediate", active_trace);
+          visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
+        }
       }
       json_decref(instr_queries[i]);
       instr_queries[i] = NULL;
@@ -332,7 +281,8 @@ int instr_conf(json_t *obj)
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
   visaStatus = viRead(visaInstr, visaReadBuffer, VISA_READ_MAX_BUFFER_SIZE, &visaRetCount);
   jstrbuff = json_stringn(visaReadBuffer, visaRetCount);
-  json_object_set_new(obj, "CALC:PAR:SEL", json_integer(atol(json_string_value(jstrbuff)+2)));
+  active_trace = atoi(json_string_value(jstrbuff) + 2);
+  json_object_set_new(obj, "CALC:PAR:SEL", json_integer(atol(json_string_value(jstrbuff) + 2)));
   json_decref(jstrbuff);
   sprintf(visaWriteBuffer, ":CALCulate%d:SMOothing:APERture?\0", active_trace);
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
@@ -360,33 +310,8 @@ int instr_conf(json_t *obj)
   jstrbuff = json_stringn(visaReadBuffer, visaRetCount);
   json_object_set_new(obj, "DISP:WIND:TRAC:Y:SCAL:RPOS", json_real(atof(json_string_value(jstrbuff))));
   json_decref(jstrbuff);
-  
-  //   json_object_set_new(obj, "DISP:WIND:Y:SCAL:DIV", json_integer(pNWA->SCPI->DISPlay->WINDow[active_channel]->Y->SCALe->DIVisions));
-  //   // Channels
-  //   long split_mode = pNWA->SCPI->DISPlay->SPLit;
-  //   if (split_mode == 4)
-  //     channel_count = 3;
-  //   else if (split_mode == 6)
-  //     channel_count = 4;
-  //   else if (split_mode == 8)
-  //     channel_count = 6;
-  //   else if (split_mode == 9)
-  //     channel_count = 8;
-  //   else if (split_mode == 10)
-  //     channel_count = 9;
-  //   else
-  //     channel_count = split_mode;
-  //   json_object_set_new(obj, "CALC", json_integer(channel_count));
-  //   active_channel = pNWA->SCPI->SERVice->CHANnel[1]->ACTive;
-  //   json_object_set_new(obj, "CALC:ACT", json_integer(active_channel));
-  //   // Traces
-  //   trace_count = pNWA->SCPI->CALCulate[active_channel]->PARameter[1]->COUNt;
-  //   json_object_set_new(obj, "CALC:PAR:COUN", json_integer(trace_count));
-  //   active_trace = pNWA->SCPI->SERVice->CHANnel[active_channel]->TRACe->ACTive;
-  //   json_object_set_new(obj, "CALC:PAR:SEL", json_integer(active_trace));
 
   json_decref(jstrbuff);
-
 
   // UI
   json_t *cat, *subcat, *cats, *subcats, *options, *parameters;
@@ -448,7 +373,6 @@ int instr_conf(json_t *obj)
   json_array_append_new(options, json_string("10 Hz"));
   json_object_set_new(subcat, "options", options);
   json_array_append_new(subcats, subcat);
-  
 
   json_object_set_new(cat, "items", subcats);
   json_array_append_new(cats, cat);
@@ -516,7 +440,7 @@ int instr_conf(json_t *obj)
   json_object_set_new(cat, "items", subcats);
   json_array_append_new(cats, cat);
 
-    // Scale
+  // Scale
   cat = json_object();
   json_object_set_new(cat, "name", json_string("Scale"));
   subcats = json_array();
@@ -535,22 +459,6 @@ int instr_conf(json_t *obj)
   json_object_set_new(subcat, "name", json_string("Ref Position"));
   json_object_set_new(subcat, "scpi", json_string("DISP:WIND:TRAC:Y:SCAL:RPOS"));
   json_array_append_new(subcats, subcat);
-
-  // subcat = json_object();
-  // json_object_set_new(subcat, "name", json_string("Divisions"));
-  // json_object_set_new(subcat, "scpi", json_string("DISP:WIND:Y:SCAL:DIV"));
-  // parameters = json_object();
-  // json_object_set_new(parameters, "min", json_integer(4));
-  // json_object_set_new(parameters, "max", json_integer(20));
-  // json_object_set_new(parameters, "step", json_integer(2));
-  // json_object_set_new(subcat, "number", parameters);
-  // json_array_append_new(subcats, subcat);
-
-  // subcat = json_object();
-  // json_object_set_new(subcat, "name", json_string("Auto Scale"));
-  // json_object_set_new(subcat, "scpi", json_string("DISP:WIND:TRAC:Y:SCAL:AUTO"));
-  // json_object_set_new(subcat, "button", json_integer(1));
-  // json_array_append_new(subcats, subcat);
 
   json_object_set_new(cat, "items", subcats);
   json_array_append_new(cats, cat);
@@ -604,7 +512,7 @@ int instr_data(json_t *obj)
   }
   // printf("%s\n", visaReadBuffer);
   // printf("%d\n", visaRetCount);
-  strncpy(data,visaReadBuffer, visaRetCount);
+  strncpy(data, visaReadBuffer, visaRetCount);
   data[visaRetCount] = '\0';
   token = strtok(data + 2 + (data[1] - '0'), ",");
   while (token != NULL)
@@ -613,8 +521,7 @@ int instr_data(json_t *obj)
     token = strtok(NULL, ",");
   }
 
-
-  strcpy(visaWriteBuffer, ":CALCulate1:DATA? FDATA");
+  sprintf(visaWriteBuffer, ":CALCulate%d:DATA? FDATA", active_trace);
   visaStatus = viWrite(visaInstr, (ViBuf)visaWriteBuffer, (ViUInt32)strlen(visaWriteBuffer), &visaWriteCount);
   if (visaStatus < VI_SUCCESS)
   {
